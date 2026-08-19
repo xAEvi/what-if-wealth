@@ -1,6 +1,7 @@
 /* Tokens semanticos de diseno: color, borde, radio y sombra.
  * Viven como variables CSS planas y se mapean a utilidades de Tailwind en
- * globals.css. El dark mode se resuelve por prefers-color-scheme. */
+ * globals.css. El tema claro es el valor por defecto de :root; el oscuro se
+ * activa con [data-theme="dark"] (toggle manual, ver state/theme-context). */
 
 :root {
   --bg: #f7f7f8;
@@ -20,20 +21,18 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #000000;
-    --surface: #0a0a0a;
-    --surface-2: #18181b;
-    --border: #27272a;
-    --fg: #fafafa;
-    --fg-muted: #a1a1aa;
-    --fg-subtle: #71717a;
-    --accent: #3b82f6;
-    --accent-contrast: #0a0a0a;
-    --success: #10b981;
-    --danger: #f87171;
-    --warning: #fbbf24;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.6);
-  }
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #18181b;
+  --border: #27272a;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --accent: #3b82f6;
+  --accent-contrast: #0a0a0a;
+  --success: #10b981;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.6);
 }

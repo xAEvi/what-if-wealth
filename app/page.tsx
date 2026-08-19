@@ -6,6 +6,7 @@ import PortfolioView from "@/components/dashboard/PortfolioView";
 import WhatIfSimulation from "@/components/simulation/WhatIfSimulation";
 import EmptyState from "@/components/common/EmptyState";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useTheme } from "@/state/theme-context";
 import { useCsvImport } from "@/hooks/useCsvImport";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -46,6 +47,7 @@ function HomeInner() {
     params.get("tab") === "simulate" ? "simulate" : "portfolio";
 
   const { importFile, reading } = useCsvImport();
+  const { theme, toggleTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Deep-linking por searchParams: ?tab=simulate queda en la URL.
@@ -62,6 +64,13 @@ function HomeInner() {
           What If Wealth
         </span>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={toggleTheme}
+            aria-label="Toggle color theme"
+          >
+            {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+          </Button>
           <input
             ref={fileRef}
             type="file"
