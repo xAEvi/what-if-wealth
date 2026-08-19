@@ -265,6 +265,74 @@ export function distribute(
   return result;
 }
 
+export type DcaFrequency =
+  | "daily"
+  | "weekly"
+  | "biweekly"
+  | "monthly"
+  | "quarterly"
+  | "annual";
+
+// Paso en dias para cada frecuencia. Los meses se aproximan a 30 dias.
+const FREQUENCY_DAYS: Record<DcaFrequency, number> = {
+  daily: 1,
+  weekly: 7,
+  biweekly: 14,
+  monthly: 30,
+  quarterly: 91,
+  annual: 365,
+};
+
+export type DcaWeight = {
+  ticker: string;
+  weight: number;
+};
+
+/**
+ * Genera lotes sinteticos de aporte periodico (DCA) desde `startDate` hasta la
+ * ultima fecha con datos. En cada periodo se compra `amount` repartido por los
+ * pesos, usando el precio de cierre de esa fecha (el motor ajusta splits luego).
+ * Solo aporta a un ticker si hay barra para esa fecha.
+ */
+export function generateDcaLots(
+  weights: Array<DcaWeight>,
+  amount: number,
+  frequency: DcaFrequency,
+  startDate: string,
+  histories: Record<string, PriceHistory>
+): Array<Lot> {
+  const end = Object.values(histories).reduce((max, history) => {
+    const last = history.bars[history.bars.length - 1]?.date;
+    return last && last > max ? last : max;
+  }, startDate);
+
+  const step = FREQUENCY_DAYS[frequency];
+  const lots: Array<Lot> = [];
+  let cursor = startDate;
+
+  while (cursor <= end) {
+    for (const { ticker, weight } of weights) {
+      const history = histories[ticker];
+      if (!history) continue;
+      const bar = resolveBar(history, cursor);
+      if (!bar) continue;
+      const cash = (amount * weight) / 100;
+      if (cash <= 0) continue;
+      lots.push({
+        date: bar.date,
+        ticker,
+        quantity: cash / bar.close,
+        price: bar.close,
+      });
+    }
+    const next = new Date(`${cursor}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + step);
+    cursor = next.toISOString().slice(0, 10);
+  }
+
+  return lots;
+}
+
 export type Position = {
   ticker: string;
   invested: number;

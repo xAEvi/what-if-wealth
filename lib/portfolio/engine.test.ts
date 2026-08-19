@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSeries,
   distribute,
+  generateDcaLots,
   lastBarAsOf,
   lotValueWithQuote,
   positionBreakdown,
@@ -243,6 +244,74 @@ describe("replaceAllWithDetails", () => {
 
     expect(pairs).toHaveLength(2);
     expect(pairs.every((pair) => pair.replacement.ticker === "D")).toBe(true);
+  });
+});
+
+describe("generateDcaLots", () => {
+  const mk = (ticker: string, closes: Array<[string, number]>) =>
+    history(
+      ticker,
+      closes.map(([date, close]) => bar(date, close))
+    );
+
+  it("compra el monto por periodo y ajusta la cantidad al precio del dia", () => {
+    // Mensual desde 2024-01-01, 100/mes, un solo ticker. Enero y febrero.
+    const h = mk("A", [
+      ["2024-01-01", 10],
+      ["2024-02-01", 20],
+    ]);
+    const lots = generateDcaLots(
+      [{ ticker: "A", weight: 100 }],
+      100,
+      "monthly",
+      "2024-01-01",
+      { A: h }
+    );
+
+    // 2 aportes: 100/10 = 10 acciones y 100/20 = 5 acciones.
+    expect(lots).toHaveLength(2);
+    expect(lots[0].quantity).toBe(10);
+    expect(lots[1].quantity).toBe(5);
+    const invested = lots.reduce((s, l) => s + l.quantity * l.price, 0);
+    expect(invested).toBe(200);
+  });
+
+  it("reparte el monto por pesos entre varios tickers", () => {
+    const a = mk("A", [["2024-01-01", 10]]);
+    const b = mk("B", [["2024-01-01", 20]]);
+    const lots = generateDcaLots(
+      [
+        { ticker: "A", weight: 70 },
+        { ticker: "B", weight: 30 },
+      ],
+      100,
+      "monthly",
+      "2024-01-01",
+      { A: a, B: b }
+    );
+
+    // 70 a A (7 acc), 30 a B (1.5 acc).
+    const la = lots.find((l) => l.ticker === "A");
+    const lb = lots.find((l) => l.ticker === "B");
+    expect(la?.quantity).toBe(7);
+    expect(lb?.quantity).toBe(1.5);
+  });
+
+  it("salta al primer dia de cotizacion si la fecha cae en feriado", () => {
+    // 2024-01-01-01 es feriado; la primera barra es el 02.
+    const h = mk("A", [
+      ["2024-01-02", 10],
+      ["2024-01-03", 10],
+    ]);
+    const lots = generateDcaLots(
+      [{ ticker: "A", weight: 100 }],
+      100,
+      "daily",
+      "2024-01-01",
+      { A: h }
+    );
+
+    expect(lots[0].date).toBe("2024-01-02");
   });
 });
 
