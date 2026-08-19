@@ -197,3 +197,58 @@ export function distribute(
   }
   return result;
 }
+
+export type Position = {
+  ticker: string;
+  invested: number;
+  value: number;
+  growthPct: number;
+};
+
+/** Desglose por ticker: capital, valor de mercado y crecimiento de cada posicion. */
+export function positionBreakdown(
+  lots: Array<Lot>,
+  histories: Record<string, PriceHistory>
+): Array<Position> {
+  const totals = new Map<string, { invested: number; value: number }>();
+
+  for (const lot of lots) {
+    const history = histories[lot.ticker];
+    if (!history) continue;
+
+    const entry = totals.get(lot.ticker) ?? { invested: 0, value: 0 };
+    const normalized = normalize(lot, history);
+    const lastBar = history.bars[history.bars.length - 1];
+
+    entry.invested += normalized.capital;
+    if (lastBar) entry.value += normalized.adjustedQuantity * lastBar.adjClose;
+    totals.set(lot.ticker, entry);
+  }
+
+  return [...totals.entries()]
+    .map(([ticker, { invested, value }]) => ({
+      ticker,
+      invested,
+      value,
+      growthPct: invested === 0 ? 0 : ((value - invested) / invested) * 100,
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/** Valor de mercado actual, valuando la cantidad ajustada con la cotizacion en vivo. */
+export function valueWithQuotes(
+  lots: Array<Lot>,
+  histories: Record<string, PriceHistory>,
+  quotes: Record<string, number>
+): number {
+  let total = 0;
+
+  for (const lot of lots) {
+    const history = histories[lot.ticker];
+    const quote = quotes[lot.ticker];
+    if (!history || quote == null) continue;
+
+    total += normalize(lot, history).adjustedQuantity * quote;
+  }
+  return total;
+}

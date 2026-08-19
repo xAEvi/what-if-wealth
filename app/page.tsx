@@ -2,6 +2,7 @@
 
 import CsvDropzone from "@/components/csv/CsvDropzone";
 import LotTable from "@/components/csv/LotTable";
+import Dashboard from "@/components/dashboard/Dashboard";
 import { usePortfolio } from "@/state/portfolio-context";
 
 export default function Home() {
@@ -24,7 +25,10 @@ export default function Home() {
         <CsvDropzone />
 
         {hasData ? (
-          <LotTable />
+          <>
+            <LotTable />
+            {state.lots.length > 0 && <Dashboard />}
+          </>
         ) : (
           <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
             Nothing imported yet. Load your portfolio CSV to get started.

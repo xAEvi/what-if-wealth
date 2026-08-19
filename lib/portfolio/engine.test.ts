@@ -3,8 +3,10 @@ import {
   buildSeries,
   distribute,
   lastBarAsOf,
+  positionBreakdown,
   resolveBar,
   substituteTicker,
+  valueWithQuotes,
 } from "./engine";
 import type { Lot, PriceBar, PriceHistory } from "./types";
 
@@ -179,5 +181,50 @@ describe("distribute", () => {
       0
     );
     expect(totalCapital).toBe(1000);
+  });
+});
+
+describe("positionBreakdown", () => {
+  const histories = {
+    BTC: history("BTC", [bar("2024-01-05", 100), bar("2024-01-08", 110)]),
+    ETF: history("ETF", [bar("2024-01-05", 10), bar("2024-01-08", 12)]),
+  };
+  const lots: Array<Lot> = [
+    { date: "2024-01-05", ticker: "BTC", quantity: 1, price: 100 },
+    { date: "2024-01-05", ticker: "ETF", quantity: 2, price: 10 },
+  ];
+
+  it("calcula valor, capital y crecimiento por posicion", () => {
+    const positions = positionBreakdown(lots, histories);
+    const btc = positions.find((p) => p.ticker === "BTC");
+    const etf = positions.find((p) => p.ticker === "ETF");
+
+    expect(btc?.value).toBe(110);
+    expect(btc?.invested).toBe(100);
+    expect(btc?.growthPct).toBe(10);
+    expect(etf?.value).toBe(24);
+    expect(etf?.invested).toBe(20);
+  });
+
+  it("ordena por valor descendente", () => {
+    const positions = positionBreakdown(lots, histories);
+    expect(positions.map((p) => p.ticker)).toEqual(["BTC", "ETF"]);
+  });
+});
+
+describe("valueWithQuotes", () => {
+  it("valua la cantidad ajustada con la cotizacion en vivo", () => {
+    const histories = {
+      BTC: history("BTC", [bar("2024-01-05", 100), bar("2024-01-08", 110)]),
+      ETF: history("ETF", [bar("2024-01-05", 10), bar("2024-01-08", 12)]),
+    };
+    const lots: Array<Lot> = [
+      { date: "2024-01-05", ticker: "BTC", quantity: 1, price: 100 },
+      { date: "2024-01-05", ticker: "ETF", quantity: 2, price: 10 },
+    ];
+
+    const total = valueWithQuotes(lots, histories, { BTC: 115, ETF: 13 });
+
+    expect(total).toBe(141); // 1*115 + 2*13
   });
 });
