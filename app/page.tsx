@@ -3,6 +3,7 @@
 import CsvDropzone from "@/components/csv/CsvDropzone";
 import LotTable from "@/components/csv/LotTable";
 import Dashboard from "@/components/dashboard/Dashboard";
+import TickerSubstitution from "@/components/simulation/TickerSubstitution";
 import { usePortfolio } from "@/state/portfolio-context";
 
 export default function Home() {
@@ -27,7 +28,12 @@ export default function Home() {
         {hasData ? (
           <>
             <LotTable />
-            {state.lots.length > 0 && <Dashboard />}
+            {state.lots.length > 0 && (
+              <>
+                <Dashboard />
+                <TickerSubstitution />
+              </>
+            )}
           </>
         ) : (
           <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">

@@ -1,6 +1,7 @@
 import YahooFinance from "yahoo-finance2";
 import type { PriceBar, PriceHistory } from "@/lib/portfolio/types";
 import { TtlCache } from "./cache";
+export { hasCoverage } from "./coverage";
 
 // Unico punto de contacto con la libreria. Nada mas importa yahoo-finance2.
 const yahoo = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
@@ -82,17 +83,4 @@ export async function searchTickers(query: string): Promise<SearchCandidate[]> {
       name: quote.shortname ?? quote.longname,
       quoteType: quote.quoteType,
     }));
-}
-
-/**
- * Un ticker sirve como reemplazo si ya cotizaba en o antes del lote mas viejo
- * a sustituir; si no, la simulacion arrancaria tarde y el crecimiento quedaria inflado.
- */
-export function hasCoverage(
-  history: PriceHistory,
-  earliestLotDate: string
-): boolean {
-  return (
-    Boolean(history.firstTradeDate) && history.firstTradeDate <= earliestLotDate
-  );
 }

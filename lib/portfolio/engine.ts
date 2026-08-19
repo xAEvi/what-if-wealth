@@ -166,6 +166,27 @@ export function substituteTicker(
 }
 
 /**
+ * Reemplaza todos los lotes por un solo ticker, preservando el capital: cada
+ * lote se convierte en acciones del destino al cierre de su propia fecha.
+ */
+export function replaceAll(lots: Array<Lot>, to: PriceHistory): Array<Lot> {
+  return lots.flatMap((lot) => {
+    const bar = resolveBar(to, lot.date);
+    if (!bar) return [];
+
+    const capital = lot.quantity * lot.price;
+    return [
+      {
+        ...lot,
+        ticker: to.ticker,
+        quantity: capital / bar.close,
+        price: bar.close,
+      },
+    ];
+  });
+}
+
+/**
  * Reparte el capital de cada lote entre varios tickers segun los pesos (porcentajes).
  * Los pesos deben sumar 100; eso se valida en el borde, no aca dentro.
  */

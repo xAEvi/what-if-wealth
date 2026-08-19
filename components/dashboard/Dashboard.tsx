@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   buildSeries,
   positionBreakdown,
   valueWithQuotes,
 } from "@/lib/portfolio/engine";
-import type { PriceHistory } from "@/lib/portfolio/types";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useHistories } from "@/hooks/useHistories";
+import { useQuotes } from "@/hooks/useQuotes";
 import SummaryCards from "@/components/summary/SummaryCards";
 import ValueChart from "@/components/charts/ValueChart";
 import GrowthChart from "@/components/charts/GrowthChart";
@@ -36,48 +37,9 @@ export default function Dashboard() {
     [lots]
   );
 
-  const [histories, setHistories] = useState<Record<
-    string,
-    PriceHistory
-  > | null>(null);
-  const [quotes, setQuotes] = useState<Record<string, number> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { histories, loading, error } = useHistories(tickers, earliestDate);
+  const { quotes } = useQuotes(tickers);
   const [excludeZeroCost, setExcludeZeroCost] = useState(false);
-
-  useEffect(() => {
-    if (lots.length === 0) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    const historyUrl = `/api/history?tickers=${encodeURIComponent(tickers.join(","))}&from=${encodeURIComponent(earliestDate)}`;
-    const quoteUrl = `/api/quote?tickers=${encodeURIComponent(tickers.join(","))}`;
-
-    Promise.all([
-      fetch(historyUrl).then((r) => r.json()),
-      fetch(quoteUrl).then((r) => r.json()),
-    ])
-      .then(([historyData, quoteData]) => {
-        if (cancelled) return;
-        if (historyData.error) {
-          setError(historyData.error);
-          return;
-        }
-        setHistories(historyData.histories ?? {});
-        setQuotes(quoteData.quotes ?? {});
-      })
-      .catch(() => {
-        if (!cancelled) setError("Failed to load market data.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lots, tickers, earliestDate]);
 
   const activeLots = useMemo(
     () => (excludeZeroCost ? lots.filter((lot) => lot.price > 0) : lots),
