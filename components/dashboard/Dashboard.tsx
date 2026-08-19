@@ -3,14 +3,8 @@
 import type { Position } from "@/lib/portfolio/engine";
 import type { PortfolioSeries } from "@/lib/portfolio/types";
 import PortfolioCharts from "@/components/charts/PortfolioCharts";
+import PositionsTable from "@/components/dashboard/PositionsTable";
 import DividendNotice from "@/components/common/DividendNotice";
-
-const usd = (value: number) =>
-  value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
 
 type DashboardProps = {
   series: PortfolioSeries | null;
@@ -20,6 +14,8 @@ type DashboardProps = {
   reload: () => void;
   excludeZeroCost: boolean;
   onExcludeZeroCostChange: (value: boolean) => void;
+  selectedTicker: string | null;
+  onSelectTicker: (ticker: string) => void;
 };
 
 /** Tablero del portafolio: toggle de costo cero, graficas y desglose. */
@@ -31,6 +27,8 @@ export default function Dashboard({
   reload,
   excludeZeroCost,
   onExcludeZeroCostChange,
+  selectedTicker,
+  onSelectTicker,
 }: DashboardProps) {
   if (loading)
     return <p className="text-sm text-fg-subtle">Loading market data…</p>;
@@ -69,44 +67,12 @@ export default function Dashboard({
       <PortfolioCharts points={series.points} />
 
       {positions.length > 0 && (
-        <div className="overflow-x-auto rounded-card border border-border">
-          <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-fg-subtle">
-              <tr>
-                <th className="px-4 py-3 font-medium">Position</th>
-                <th className="px-4 py-3 text-right font-medium">Value</th>
-                <th className="px-4 py-3 text-right font-medium">Invested</th>
-                <th className="px-4 py-3 text-right font-medium">Gain</th>
-                <th className="px-4 py-3 text-right font-medium">Growth</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {positions.map((position) => {
-                const gain = position.value - position.invested;
-                return (
-                  <tr key={position.ticker}>
-                    <td className="px-4 py-2.5 font-medium text-fg">
-                      {position.ticker}
-                    </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                      {usd(position.value)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                      {usd(position.invested)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                      {gain >= 0 ? "+" : "-"}
-                      {usd(Math.abs(gain))}
-                    </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                      {position.growthPct.toFixed(1)}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <PositionsTable
+          positions={positions}
+          totalValue={positions.reduce((sum, position) => sum + position.value, 0)}
+          selectedTicker={selectedTicker}
+          onSelectTicker={onSelectTicker}
+        />
       )}
 
       <DividendNotice />

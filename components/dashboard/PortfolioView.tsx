@@ -12,6 +12,11 @@ import { useQuotes } from "@/hooks/useQuotes";
 import SummaryStrip from "@/components/summary/SummaryStrip";
 import Dashboard from "@/components/dashboard/Dashboard";
 import LotTable from "@/components/csv/LotTable";
+import {
+  ChartSkeleton,
+  SummaryStripSkeleton,
+  TableSkeleton,
+} from "@/components/ui/Skeletons";
 
 /**
  * Vista del portafolio: calcula la serie una sola vez y compone la barra de
@@ -41,6 +46,8 @@ export default function PortfolioView() {
   );
   const { quotes } = useQuotes(tickers);
   const [excludeZeroCost, setExcludeZeroCost] = useState(false);
+  // Filtro cruzado: al hacer click en una posicion se filtra la tabla de lotes.
+  const [linkedTicker, setLinkedTicker] = useState<string | null>(null);
 
   const activeLots = useMemo(
     () => (excludeZeroCost ? lots.filter((lot) => lot.price > 0) : lots),
@@ -70,6 +77,32 @@ export default function PortfolioView() {
     ? ((currentValue - invested) / invested) * 100
     : 0;
 
+  // Mientras cargan los historicos se muestran skeletons en vez de texto plano.
+  if (loading)
+    return (
+      <>
+        <SummaryStripSkeleton />
+        <div className="space-y-6">
+          <ChartSkeleton />
+          <TableSkeleton />
+        </div>
+      </>
+    );
+
+  if (error)
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-card border border-danger/40 bg-danger/5 p-4 text-sm text-danger">
+        <span>{error}</span>
+        <button
+          type="button"
+          onClick={reload}
+          className="shrink-0 rounded-sm-card border border-danger/50 px-3 py-1 font-medium transition-colors hover:bg-danger/10"
+        >
+          Retry
+        </button>
+      </div>
+    );
+
   return (
     <>
       <SummaryStrip
@@ -86,8 +119,15 @@ export default function PortfolioView() {
         reload={reload}
         excludeZeroCost={excludeZeroCost}
         onExcludeZeroCostChange={setExcludeZeroCost}
+        selectedTicker={linkedTicker}
+        onSelectTicker={(ticker) =>
+          setLinkedTicker((current) => (current === ticker ? null : ticker))
+        }
       />
-      <LotTable />
+      <LotTable
+        linkedTicker={linkedTicker}
+        onLinkedTickerChange={setLinkedTicker}
+      />
     </>
   );
 }

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   buildSeries,
   distribute,
-  lotValueWithQuote,
   replaceAll,
   replaceAllWithDetails,
   replaceTickerWithDetails,
@@ -22,6 +21,7 @@ import DividendNotice from "@/components/common/DividendNotice";
 import Button from "@/components/ui/Button";
 import ReplacePanel from "./ReplacePanel";
 import DistributePanel from "./DistributePanel";
+import ReplacementDetail from "./ReplacementDetail";
 import type { SearchCandidate } from "@/hooks/useSearch";
 import type { WeightRow } from "./types";
 
@@ -33,15 +33,6 @@ const usd = (value: number) =>
     currency: "USD",
     maximumFractionDigits: 0,
   });
-const usdPrecise = (value: number) =>
-  value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  });
-const quantityFormat = new Intl.NumberFormat("en-US", {
-  maximumSignificantDigits: 6,
-});
 
 export default function WhatIfSimulation() {
   const { state } = usePortfolio();
@@ -110,13 +101,6 @@ export default function WhatIfSimulation() {
     // Mismo orden que la tabla de compras: mas reciente primero.
     return pairs.sort((a, b) => b.original.date.localeCompare(a.original.date));
   }, [mode, destHistory, replaceAllMode, fromTicker, lots]);
-
-  const replacementValueNow = (replacement: Replacement): number | null => {
-    const history = histories?.[replacement.replacement.ticker];
-    const quote = quotes?.[replacement.replacement.ticker];
-    if (!history || quote == null) return null;
-    return lotValueWithQuote(replacement.replacement, history, quote);
-  };
 
   const sum = rows.reduce((total, row) => total + row.weight, 0);
   const sumValid = Math.abs(sum - 100) < 1e-6;
@@ -329,57 +313,11 @@ export default function WhatIfSimulation() {
           </div>
 
           {mode === "replace" && replacements.length > 0 ? (
-            <div className="overflow-x-auto rounded-card border border-border bg-surface">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-fg-subtle">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Date</th>
-                    <th className="px-4 py-3 font-medium">Replacement</th>
-                    <th className="px-4 py-3 text-right font-medium">Quantity</th>
-                    <th className="px-4 py-3 text-right font-medium">Price</th>
-                    <th className="px-4 py-3 text-right font-medium">Cost</th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      Value now
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {replacements.map((pair, index) => {
-                    const valueNow = replacementValueNow(pair);
-                    return (
-                      <tr
-                        key={`${pair.original.ticker}-${pair.original.date}-${index}`}
-                      >
-                        <td className="px-4 py-2.5 tabular-nums text-fg-muted">
-                          {pair.original.date}
-                        </td>
-                        <td className="px-4 py-2.5 font-medium text-fg">
-                          <span className="text-fg-subtle line-through">
-                            {pair.original.ticker}
-                          </span>{" "}
-                          <span className="text-fg-subtle">→</span>{" "}
-                          {pair.replacement.ticker}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                          {quantityFormat.format(pair.replacement.quantity)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                          {usdPrecise(pair.replacement.price)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                          {usdPrecise(
-                            pair.replacement.quantity * pair.replacement.price
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-fg-muted">
-                          {valueNow != null ? usdPrecise(valueNow) : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ReplacementDetail
+              replacements={replacements}
+              histories={histories}
+              quotes={quotes}
+            />
           ) : null}
 
           <DividendNotice />
