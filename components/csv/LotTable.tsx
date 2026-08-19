@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { lotValueWithQuote } from "@/lib/portfolio/engine";
 import type { Lot } from "@/lib/portfolio/types";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useToast } from "@/state/toast-context";
 import { useHistories } from "@/hooks/useHistories";
 import { useQuotes } from "@/hooks/useQuotes";
 import Button from "@/components/ui/Button";
@@ -35,13 +36,15 @@ type SortKey =
   | "price"
   | "valueNow"
   | "costTotal"
-  | "gain";
+  | "gain"
+  | "gainPct";
 
 type EnrichedLot = {
   lot: Lot;
   costTotal: number;
   valueNow: number | null;
   gain: number | null;
+  gainPct: number | null;
 };
 
 type LotTableProps = {
@@ -54,6 +57,7 @@ export default function LotTable({
   onLinkedTickerChange,
 }: LotTableProps) {
   const { state, dispatch } = usePortfolio();
+  const { toast } = useToast();
   const { lots, errors, fileName, importedAt } = state;
   const [collapsed, setCollapsed] = useState(false);
 
@@ -98,12 +102,12 @@ export default function LotTable({
       lots.map((lot) => {
         const costTotal = lot.quantity * lot.price;
         const valueNow = valueByLot.has(lot) ? valueByLot.get(lot)! : null;
-        return {
-          lot,
-          costTotal,
-          valueNow,
-          gain: valueNow != null ? valueNow - costTotal : null,
-        };
+        const gain = valueNow != null ? valueNow - costTotal : null;
+        // El porcentaje necesita base de costo; los lotes de costo cero no la
+        // tienen, asi que no se puede expresar retorno.
+        const gainPct =
+          costTotal > 0 && gain != null ? (gain / costTotal) * 100 : null;
+        return { lot, costTotal, valueNow, gain, gainPct };
       }),
     [lots, valueByLot]
   );
@@ -116,7 +120,7 @@ export default function LotTable({
       if (zeroOnly && lot.price !== 0) return false;
       if (linkedTicker && lot.ticker !== linkedTicker) return false;
       if (query) {
-        const haystack = `${lot.date} ${lot.comment ?? ""}`.toLowerCase();
+        const haystack = `${lot.date}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -141,6 +145,8 @@ export default function LotTable({
           return row.valueNow;
         case "gain":
           return row.gain;
+        case "gainPct":
+          return row.gainPct;
       }
     };
     // Los valores nulos (sin cotizacion aun) van siempre al final.
@@ -212,7 +218,14 @@ export default function LotTable({
         </div>
         <button
           type="button"
-          onClick={() => dispatch({ type: "clear" })}
+          onClick={() => {
+            dispatch({ type: "clear" });
+            toast({
+              id: "portfolio-cleared",
+              message: "Portfolio cleared",
+              tone: "neutral",
+            });
+          }}
           className="rounded-sm-card border border-border px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2"
         >
           Clear portfolio
@@ -330,7 +343,7 @@ export default function LotTable({
                   <SortHeader label="Cost total" column="costTotal" onClick={changeSort} indicator={sortIndicator} align="right" />
                   <SortHeader label="Value now" column="valueNow" onClick={changeSort} indicator={sortIndicator} align="right" />
                   <SortHeader label="Gain" column="gain" onClick={changeSort} indicator={sortIndicator} align="right" />
-                  <th className="px-4 py-3 font-medium">Comment</th>
+                  <SortHeader label="Gain %" column="gainPct" onClick={changeSort} indicator={sortIndicator} align="right" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -421,6 +434,7 @@ function SortHeader({
 }) {
   return (
     <th
+      scope="col"
       className="px-4 py-3 font-medium"
       aria-sort={
         indicator(column)
@@ -444,12 +458,18 @@ function SortHeader({
   );
 }
 
-function LotRow({ row }: { row: EnrichedLot }) {
-  const { lot, costTotal, valueNow, gain } = row;
+const LotRow = memo(function LotRow({ row }: { row: EnrichedLot }) {
+  const { lot, costTotal, valueNow, gain, gainPct } = row;
   const gainClass =
     gain == null
       ? "text-fg-muted"
       : gain >= 0
+        ? "text-success"
+        : "text-danger";
+  const gainPctClass =
+    gainPct == null
+      ? "text-fg-muted"
+      : gainPct >= 0
         ? "text-success"
         : "text-danger";
   return (
@@ -473,23 +493,23 @@ function LotRow({ row }: { row: EnrichedLot }) {
       <td className={`px-4 py-2.5 text-right tabular-nums ${gainClass}`}>
         {gain != null ? signed(gain) : "—"}
       </td>
-      <td className="px-4 py-2.5 text-fg-subtle">
-        {lot.price === 0 ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-            {lot.comment ?? "Zero cost"}
-          </span>
-        ) : (
-          lot.comment
-        )}
+      <td className={`px-4 py-2.5 text-right tabular-nums ${gainPctClass}`}>
+        {gainPct != null ? `${gainPct >= 0 ? "+" : ""}${gainPct.toFixed(1)}%` : "—"}
       </td>
     </tr>
   );
-}
+});
 
-function LotCard({ row }: { row: EnrichedLot }) {
-  const { lot, costTotal, valueNow, gain } = row;
+const LotCard = memo(function LotCard({ row }: { row: EnrichedLot }) {
+  const { lot, costTotal, valueNow, gain, gainPct } = row;
   const gainClass =
     gain == null ? "text-fg-muted" : gain >= 0 ? "text-success" : "text-danger";
+  const gainPctClass =
+    gainPct == null
+      ? "text-fg-muted"
+      : gainPct >= 0
+        ? "text-success"
+        : "text-danger";
   return (
     <div
       className={`rounded-card border border-border p-4 ${
@@ -525,19 +545,22 @@ function LotCard({ row }: { row: EnrichedLot }) {
             {valueNow != null ? priceFormat.format(valueNow) : "—"}
           </dd>
         </div>
-        <div className="col-span-2">
+        <div>
           <dt className="text-xs text-fg-subtle">Gain</dt>
           <dd className={`tabular-nums ${gainClass}`}>
             {gain != null ? signed(gain) : "—"}
           </dd>
         </div>
+        <div>
+          <dt className="text-xs text-fg-subtle">Gain %</dt>
+          <dd className={`tabular-nums ${gainPctClass}`}>
+            {gainPct != null ? `${gainPct >= 0 ? "+" : ""}${gainPct.toFixed(1)}%` : "—"}
+          </dd>
+        </div>
       </dl>
-      {lot.price === 0 ? (
-        <p className="mt-2 text-xs text-warning">{lot.comment ?? "Zero cost"}</p>
-      ) : null}
     </div>
   );
-}
+});
 
 function SkeletonRows() {
   return (

@@ -34,12 +34,12 @@ export default function PositionsTable({
         </caption>
         <thead className="border-b border-border bg-surface-2 text-xs uppercase tracking-wide text-fg-subtle">
           <tr>
-            <th className="px-4 py-3 font-medium">Position</th>
-            <th className="px-4 py-3 text-right font-medium">Value</th>
-            <th className="px-4 py-3 text-right font-medium">Invested</th>
-            <th className="px-4 py-3 text-right font-medium">Gain</th>
-            <th className="px-4 py-3 text-right font-medium">Growth</th>
-            <th className="px-4 py-3 font-medium">Weight</th>
+            <th scope="col" className="px-4 py-3 font-medium">Position</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Value</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Invested</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Gain</th>
+            <th scope="col" className="px-4 py-3 text-right font-medium">Growth</th>
+            <th scope="col" className="px-4 py-3 font-medium">Weight</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">

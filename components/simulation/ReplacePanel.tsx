@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearch, type SearchCandidate } from "@/hooks/useSearch";
 import SearchDropdown from "./SearchDropdown";
+import { useToast } from "@/state/toast-context";
 
 type ReplacePanelProps = {
   portfolioTickers: Array<string>;
@@ -34,6 +35,18 @@ export default function ReplacePanel({
 }: ReplacePanelProps) {
   const [query, setQuery] = useState("");
   const { results, searching } = useSearch(query);
+  const { toast } = useToast();
+
+  // Avisa cuando la busqueda termino sin coincidencias (deduplicado por id).
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!searching && trimmed.length >= 2 && results.length === 0)
+      toast({
+        id: "search-empty",
+        message: `No tickers found for "${trimmed}"`,
+        tone: "neutral",
+      });
+  }, [searching, query, results.length, toast]);
 
   const display = toTicker
     ? `${toTicker}${toName ? ` — ${toName}` : ""}`

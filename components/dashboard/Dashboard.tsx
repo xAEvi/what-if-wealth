@@ -2,9 +2,16 @@
 
 import type { Position } from "@/lib/portfolio/engine";
 import type { PortfolioSeries } from "@/lib/portfolio/types";
-import PortfolioCharts from "@/components/charts/PortfolioCharts";
+import dynamic from "next/dynamic";
 import PositionsTable from "@/components/dashboard/PositionsTable";
 import DividendNotice from "@/components/common/DividendNotice";
+import { ChartSkeleton } from "@/components/ui/Skeletons";
+
+// recharts es pesado: se carga bajo demanda para no bloquear el LCP.
+const PortfolioCharts = dynamic(
+  () => import("@/components/charts/PortfolioCharts"),
+  { ssr: false, loading: () => <ChartSkeleton /> }
+);
 
 type DashboardProps = {
   series: PortfolioSeries | null;

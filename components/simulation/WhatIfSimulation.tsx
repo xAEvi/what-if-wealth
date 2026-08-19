@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSeries,
   distribute,
@@ -12,11 +12,11 @@ import {
 } from "@/lib/portfolio/engine";
 import { hasCoverage } from "@/lib/market/coverage";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useToast } from "@/state/toast-context";
 import { useHistories } from "@/hooks/useHistories";
 import { useQuotes } from "@/hooks/useQuotes";
-import ComparisonChart, {
-  type ComparisonDatum,
-} from "@/components/charts/ComparisonChart";
+import dynamic from "next/dynamic";
+import type { ComparisonDatum } from "@/components/charts/ComparisonChart";
 import DividendNotice from "@/components/common/DividendNotice";
 import Button from "@/components/ui/Button";
 import ReplacePanel from "./ReplacePanel";
@@ -24,6 +24,12 @@ import DistributePanel from "./DistributePanel";
 import ReplacementDetail from "./ReplacementDetail";
 import type { SearchCandidate } from "@/hooks/useSearch";
 import type { WeightRow } from "./types";
+
+// recharts se carga bajo demanda para no bloquear el primer pintado.
+const ComparisonChart = dynamic(
+  () => import("@/components/charts/ComparisonChart"),
+  { ssr: false }
+);
 
 type Mode = "replace" | "distribute";
 
@@ -37,6 +43,7 @@ const usd = (value: number) =>
 export default function WhatIfSimulation() {
   const { state } = usePortfolio();
   const { lots } = state;
+  const { toast } = useToast();
 
   const portfolioTickers = useMemo(
     () => [...new Set(lots.map((lot) => lot.ticker))].sort(),
@@ -61,6 +68,8 @@ export default function WhatIfSimulation() {
 
   // Estado del modo distribucion.
   const [rows, setRows] = useState<Array<WeightRow>>([]);
+  // Version diferida: el recalculo de la simulacion no compite con cada tecla.
+  const deferredRows = useDeferredValue(rows);
 
   const sourceEarliest = useMemo(
     () =>
@@ -134,7 +143,7 @@ export default function WhatIfSimulation() {
 
     if (!sumValid || rows.length === 0 || coverageIssues.length > 0)
       return null;
-    const weights = rows.map((row) => ({
+    const weights = deferredRows.map((row) => ({
       ticker: row.ticker,
       weight: row.weight,
     }));
@@ -146,10 +155,11 @@ export default function WhatIfSimulation() {
     covered,
     replaceAllMode,
     fromTicker,
-    rows,
+    deferredRows,
     sumValid,
     coverageIssues,
     lots,
+    rows.length,
   ]);
 
   const combined: Array<ComparisonDatum> = useMemo(() => {
@@ -164,6 +174,19 @@ export default function WhatIfSimulation() {
     }
     return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
   }, [original, simulated]);
+
+  // Avisa una sola vez al pasar a pesos invalidos, no en cada tecla.
+  const prevInvalid = useRef(false);
+  useEffect(() => {
+    const invalid = mode === "distribute" && rows.length > 0 && !sumValid;
+    if (invalid && !prevInvalid.current)
+      toast({
+        id: "weights-invalid",
+        message: "Weights must sum to 100%.",
+        tone: "warning",
+      });
+    prevInvalid.current = invalid;
+  }, [mode, rows.length, sumValid, toast]);
 
   const onDestinationSelected = (candidate: SearchCandidate) => {
     setToTicker(candidate.symbol);
