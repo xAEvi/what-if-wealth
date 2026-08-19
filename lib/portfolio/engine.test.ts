@@ -6,6 +6,8 @@ import {
   lotValueWithQuote,
   positionBreakdown,
   replaceAll,
+  replaceAllWithDetails,
+  replaceTickerWithDetails,
   resolveBar,
   substituteTicker,
   valueWithQuotes,
@@ -206,6 +208,41 @@ describe("replaceAll", () => {
       0
     );
     expect(totalCapital).toBe(1250); // 1000 + 250
+  });
+});
+
+describe("replaceTickerWithDetails", () => {
+  it("empareja cada lote sustituido con su reemplazo, preservando el capital", () => {
+    const target = history("B", [bar("2024-01-02", 50)]);
+    const lots: Array<Lot> = [
+      { date: "2024-01-02", ticker: "A", quantity: 10, price: 100 },
+      { date: "2024-01-02", ticker: "C", quantity: 2, price: 20 },
+    ];
+
+    const pairs = replaceTickerWithDetails(lots, "A", target);
+
+    expect(pairs).toHaveLength(1);
+    expect(pairs[0].original.ticker).toBe("A");
+    expect(pairs[0].replacement.ticker).toBe("B");
+    expect(pairs[0].replacement.quantity).toBe(20);
+    expect(pairs[0].replacement.quantity * pairs[0].replacement.price).toBe(
+      1000
+    );
+  });
+});
+
+describe("replaceAllWithDetails", () => {
+  it("empareja todos los lotes, no solo los de un ticker", () => {
+    const target = history("D", [bar("2024-01-02", 50)]);
+    const lots: Array<Lot> = [
+      { date: "2024-01-02", ticker: "A", quantity: 10, price: 100 },
+      { date: "2024-01-02", ticker: "B", quantity: 4, price: 50 },
+    ];
+
+    const pairs = replaceAllWithDetails(lots, target);
+
+    expect(pairs).toHaveLength(2);
+    expect(pairs.every((pair) => pair.replacement.ticker === "D")).toBe(true);
   });
 });
 

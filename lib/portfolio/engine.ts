@@ -186,6 +186,52 @@ export function replaceAll(lots: Array<Lot>, to: PriceHistory): Array<Lot> {
   });
 }
 
+/** Par de lotes para mostrar el detalle de una sustitucion: el original y su reemplazo. */
+export type Replacement = {
+  original: Lot;
+  replacement: Lot;
+};
+
+function toReplacement(lot: Lot, to: PriceHistory): Replacement | null {
+  const bar = resolveBar(to, lot.date);
+  if (!bar) return null;
+
+  const capital = lot.quantity * lot.price;
+  return {
+    original: lot,
+    replacement: {
+      ...lot,
+      ticker: to.ticker,
+      quantity: capital / bar.close,
+      price: bar.close,
+    },
+  };
+}
+
+/** Pares original->reemplazo de los lotes de un ticker sustituido por `to`. */
+export function replaceTickerWithDetails(
+  lots: Array<Lot>,
+  from: string,
+  to: PriceHistory
+): Array<Replacement> {
+  return lots.flatMap((lot) => {
+    if (lot.ticker !== from) return [];
+    const replacement = toReplacement(lot, to);
+    return replacement ? [replacement] : [];
+  });
+}
+
+/** Pares original->reemplazo de todos los lotes convertidos a `to`. */
+export function replaceAllWithDetails(
+  lots: Array<Lot>,
+  to: PriceHistory
+): Array<Replacement> {
+  return lots.flatMap((lot) => {
+    const replacement = toReplacement(lot, to);
+    return replacement ? [replacement] : [];
+  });
+}
+
 /**
  * Reparte el capital de cada lote entre varios tickers segun los pesos (porcentajes).
  * Los pesos deben sumar 100; eso se valida en el borde, no aca dentro.

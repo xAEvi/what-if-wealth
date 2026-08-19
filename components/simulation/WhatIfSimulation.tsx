@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import {
   buildSeries,
   distribute,
+  lotValueWithQuote,
   replaceAll,
+  replaceAllWithDetails,
+  replaceTickerWithDetails,
   substituteTicker,
+  type Replacement,
 } from "@/lib/portfolio/engine";
 import { hasCoverage } from "@/lib/market/coverage";
 import { usePortfolio } from "@/state/portfolio-context";
 import { useHistories } from "@/hooks/useHistories";
+import { useQuotes } from "@/hooks/useQuotes";
 import ComparisonChart, {
   type ComparisonDatum,
 } from "@/components/charts/ComparisonChart";
@@ -33,6 +38,15 @@ const usd = (value: number) =>
     currency: "USD",
     maximumFractionDigits: 0,
   });
+const usdPrecise = (value: number) =>
+  value.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
+const quantityFormat = new Intl.NumberFormat("en-US", {
+  maximumSignificantDigits: 6,
+});
 
 export default function WhatIfSimulation() {
   const { state } = usePortfolio();
@@ -91,12 +105,29 @@ export default function WhatIfSimulation() {
     allTickers,
     portfolioEarliest
   );
+  const { quotes } = useQuotes(allTickers);
 
   const destHistory = toTicker ? histories?.[toTicker] : undefined;
   const covered =
     destHistory && earliestToCover
       ? hasCoverage(destHistory, earliestToCover)
       : null;
+
+  const replacements: Array<Replacement> = useMemo(() => {
+    if (mode !== "replace" || !destHistory) return [];
+    const pairs = replaceAllMode
+      ? replaceAllWithDetails(lots, destHistory)
+      : replaceTickerWithDetails(lots, fromTicker, destHistory);
+    // Mismo orden que la tabla de compras: mas reciente primero.
+    return pairs.sort((a, b) => b.original.date.localeCompare(a.original.date));
+  }, [mode, destHistory, replaceAllMode, fromTicker, lots]);
+
+  const replacementValueNow = (replacement: Replacement): number | null => {
+    const history = histories?.[replacement.replacement.ticker];
+    const quote = quotes?.[replacement.replacement.ticker];
+    if (!history || quote == null) return null;
+    return lotValueWithQuote(replacement.replacement, history, quote);
+  };
 
   const sum = rows.reduce((total, row) => total + row.weight, 0);
   const sumValid = Math.abs(sum - 100) < 1e-6;
@@ -506,6 +537,61 @@ export default function WhatIfSimulation() {
               </p>
             </div>
           </div>
+
+          {mode === "replace" && replacements.length > 0 ? (
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Replacement</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Quantity
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">Price</th>
+                    <th className="px-4 py-3 text-right font-medium">Cost</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Value now
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {replacements.map((pair, index) => {
+                    const valueNow = replacementValueNow(pair);
+                    return (
+                      <tr key={`${pair.original.ticker}-${pair.original.date}-${index}`}>
+                        <td className="px-4 py-2.5 tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {pair.original.date}
+                        </td>
+                        <td className="px-4 py-2.5 font-medium text-zinc-900 dark:text-zinc-100">
+                          <span className="text-zinc-400 line-through">
+                            {pair.original.ticker}
+                          </span>{" "}
+                          <span className="text-zinc-400">→</span>{" "}
+                          {pair.replacement.ticker}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {quantityFormat.format(pair.replacement.quantity)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {usdPrecise(pair.replacement.price)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {usdPrecise(
+                            pair.replacement.quantity * pair.replacement.price
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {valueNow != null ? usdPrecise(valueNow) : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
           <DividendNotice />
         </>
       ) : null}

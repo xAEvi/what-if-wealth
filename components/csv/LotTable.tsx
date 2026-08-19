@@ -59,7 +59,7 @@ export default function LotTable() {
     () =>
       [...lots].sort(
         (a, b) =>
-          a.date.localeCompare(b.date) || a.ticker.localeCompare(b.ticker)
+          b.date.localeCompare(a.date) || a.ticker.localeCompare(b.ticker)
       ),
     [lots]
   );
