@@ -1,56 +1,143 @@
 "use client";
 
-import CsvDropzone from "@/components/csv/CsvDropzone";
-import LotTable from "@/components/csv/LotTable";
-import Dashboard from "@/components/dashboard/Dashboard";
+import { Suspense, useRef, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import PortfolioView from "@/components/dashboard/PortfolioView";
 import WhatIfSimulation from "@/components/simulation/WhatIfSimulation";
+import EmptyState from "@/components/common/EmptyState";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useCsvImport } from "@/hooks/useCsvImport";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
 
-export default function Home() {
+type Tab = "portfolio" | "simulate";
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={`h-11 border-b-2 px-4 text-sm font-medium transition-colors ${
+        active
+          ? "border-accent text-fg"
+          : "border-transparent text-fg-muted hover:text-fg"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function HomeInner() {
   const { state } = usePortfolio();
   const hasData = state.lots.length > 0 || state.errors.length > 0;
+  const router = useRouter();
+  const params = useSearchParams();
+  const activeTab: Tab =
+    params.get("tab") === "simulate" ? "simulate" : "portfolio";
+
+  const { importFile, reading } = useCsvImport();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Deep-linking por searchParams: ?tab=simulate queda en la URL.
+  const setTab = (tab: Tab) => {
+    router.replace(tab === "simulate" ? "?tab=simulate" : "/", {
+      scroll: false,
+    });
+  };
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
-        <header>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            What If Wealth
-          </h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Import your Yahoo portfolio to run counterfactual investment
-            simulations.
-          </p>
-        </header>
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface/90 px-4 backdrop-blur">
+        <span className="font-semibold tracking-tight text-fg">
+          What If Wealth
+        </span>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) importFile(file);
+              event.target.value = "";
+            }}
+          />
+          <Button variant="primary" onClick={() => fileRef.current?.click()}>
+            {reading ? "Reading…" : "Import CSV"}
+          </Button>
+          <a
+            href="/portfolio-sample.csv"
+            download="portfolio-sample.csv"
+            className="rounded-sm-card px-3 py-1.5 text-sm font-medium text-fg-muted transition-colors hover:bg-surface-2"
+          >
+            Sample CSV
+          </a>
+        </div>
+      </header>
 
-        <CsvDropzone />
-
-        {hasData ? (
-          <>
-            <LotTable />
-            {state.lots.length > 0 && (
-              <>
-                <Dashboard />
-                <WhatIfSimulation />
-              </>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-center">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Nothing imported yet. Load your Yahoo portfolio CSV to get
-              started, or download a sample to explore the tool.
-            </p>
-            <a
-              href="/portfolio-sample.csv"
-              download="portfolio-sample.csv"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+      {hasData ? (
+        <>
+          <nav
+            className="sticky top-14 z-30 flex gap-1 border-b border-border bg-surface px-4"
+            aria-label="Views"
+          >
+            <TabButton
+              active={activeTab === "portfolio"}
+              onClick={() => setTab("portfolio")}
             >
-              Download sample CSV
-            </a>
-          </div>
-        )}
-      </main>
+              Portfolio
+              {state.lots.length > 0 ? (
+                <Badge tone="neutral" className="ml-2">
+                  {state.lots.length}
+                </Badge>
+              ) : null}
+            </TabButton>
+            <TabButton
+              active={activeTab === "simulate"}
+              onClick={() => setTab("simulate")}
+            >
+              Simulate
+            </TabButton>
+          </nav>
+
+          <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-6">
+            {activeTab === "portfolio" ? <PortfolioView /> : <WhatIfSimulation />}
+          </main>
+        </>
+      ) : (
+        <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-12">
+          <EmptyState />
+        </main>
+      )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-full flex-col">
+          <header className="sticky top-0 z-40 flex h-14 items-center border-b border-border bg-surface/90 px-4 backdrop-blur">
+            <span className="font-semibold tracking-tight text-fg">
+              What If Wealth
+            </span>
+          </header>
+        </div>
+      }
+    >
+      <HomeInner />
+    </Suspense>
   );
 }

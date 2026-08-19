@@ -1,45 +1,36 @@
 "use client";
 
 import { useRef, useState, type DragEvent, type ChangeEvent } from "react";
-import { parsePortfolioCsv } from "@/lib/csv/parser";
-import { usePortfolio } from "@/state/portfolio-context";
+import { useCsvImport } from "@/hooks/useCsvImport";
 
+/**
+ * Zona de arrastre para el CSV de Yahoo. Sus estados (idle, dragover, error)
+ * se reflejan en borde y color, y el error se anuncia con aria-live para
+ * lectores de pantalla.
+ */
 export default function CsvDropzone() {
-  const { dispatch } = usePortfolio();
+  const { importFile, reading, error } = useCsvImport();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [reading, setReading] = useState(false);
-
-  const handleFile = async (file: File) => {
-    setReading(true);
-    try {
-      const raw = await file.text();
-      const parsed = parsePortfolioCsv(raw);
-      dispatch({
-        type: "import",
-        payload: {
-          lots: parsed.lots,
-          errors: parsed.errors,
-          fileName: file.name,
-        },
-      });
-    } finally {
-      setReading(false);
-    }
-  };
 
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setDragging(false);
     const file = event.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (file) importFile(file);
   };
 
   const onSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) importFile(file);
     event.target.value = "";
   };
+
+  const label = error
+    ? error
+    : reading
+      ? "Reading file…"
+      : "Drop your Yahoo portfolio export here, or click to browse";
 
   return (
     <div
@@ -57,10 +48,12 @@ export default function CsvDropzone() {
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
-      className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition-colors ${
-        dragging
-          ? "border-zinc-800 bg-zinc-100 dark:border-zinc-200 dark:bg-zinc-800"
-          : "border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:bg-zinc-900"
+      className={`flex min-h-48 cursor-pointer flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed p-8 text-center transition-colors ${
+        error
+          ? "border-danger bg-danger/5"
+          : dragging
+            ? "border-accent bg-accent/5"
+            : "border-border hover:border-fg-subtle hover:bg-surface-2"
       }`}
     >
       <input
@@ -71,16 +64,19 @@ export default function CsvDropzone() {
         onChange={onSelect}
       />
       <span className="text-3xl" aria-hidden>
-        {reading ? "⏳" : "📄"}
+        {reading ? "⏳" : error ? "⚠️" : "📄"}
       </span>
-      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-        {reading
-          ? "Reading file…"
-          : "Drop your Yahoo portfolio export here, or click to browse"}
+      <p className={`text-sm font-medium ${error ? "text-danger" : "text-fg"}`}>
+        {label}
       </p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Exported CSV with Symbol, Trade Date, Purchase Price, Quantity and
-        Transaction Type
+      {!error && !reading ? (
+        <p className="text-xs text-fg-subtle">
+          Exported CSV with Symbol, Trade Date, Purchase Price, Quantity and
+          Transaction Type
+        </p>
+      ) : null}
+      <p className="sr-only" aria-live="polite">
+        {error ?? ""}
       </p>
     </div>
   );
