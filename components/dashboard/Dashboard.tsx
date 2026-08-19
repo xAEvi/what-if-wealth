@@ -38,7 +38,10 @@ export default function Dashboard() {
     [lots]
   );
 
-  const { histories, loading, error, reload } = useHistories(tickers, earliestDate);
+  const { histories, loading, error, reload } = useHistories(
+    tickers,
+    earliestDate
+  );
   const { quotes } = useQuotes(tickers);
   const [excludeZeroCost, setExcludeZeroCost] = useState(false);
 

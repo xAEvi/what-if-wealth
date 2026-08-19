@@ -3,6 +3,7 @@ import {
   buildSeries,
   distribute,
   lastBarAsOf,
+  lotValueWithQuote,
   positionBreakdown,
   replaceAll,
   resolveBar,
@@ -187,10 +188,7 @@ describe("distribute", () => {
 
 describe("replaceAll", () => {
   it("convierte todos los lotes al destino preservando el capital total", () => {
-    const target = history("D", [
-      bar("2024-01-02", 50),
-      bar("2024-01-03", 25),
-    ]);
+    const target = history("D", [bar("2024-01-02", 50), bar("2024-01-03", 25)]);
     const lots: Array<Lot> = [
       { date: "2024-01-02", ticker: "A", quantity: 10, price: 100 },
       { date: "2024-01-03", ticker: "B", quantity: 5, price: 50 },
@@ -203,7 +201,10 @@ describe("replaceAll", () => {
     expect(replaced[0].quantity).toBe(20); // 1000 / 50
     expect(replaced[1].quantity).toBe(10); // 250 / 25
 
-    const totalCapital = replaced.reduce((sum, lot) => sum + lot.quantity * lot.price, 0);
+    const totalCapital = replaced.reduce(
+      (sum, lot) => sum + lot.quantity * lot.price,
+      0
+    );
     expect(totalCapital).toBe(1250); // 1000 + 250
   });
 });
@@ -250,5 +251,23 @@ describe("valueWithQuotes", () => {
     const total = valueWithQuotes(lots, histories, { BTC: 115, ETF: 13 });
 
     expect(total).toBe(141); // 1*115 + 2*13
+  });
+});
+
+describe("lotValueWithQuote", () => {
+  it("valua un lote individual ajustando por split", () => {
+    // Factor 0.25 por un split 4:1: 10 acciones pre-split -> 40 ajustadas.
+    const split = history("SPLIT", [
+      bar("2024-01-02", 100, 25),
+      bar("2024-01-03", 25, 25),
+    ]);
+    const lot: Lot = {
+      date: "2024-01-02",
+      ticker: "SPLIT",
+      quantity: 10,
+      price: 100,
+    };
+
+    expect(lotValueWithQuote(lot, split, 30)).toBe(1200); // 40 * 30
   });
 });

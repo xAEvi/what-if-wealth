@@ -1,7 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { lotValueWithQuote } from "@/lib/portfolio/engine";
+import type { Lot } from "@/lib/portfolio/types";
 import { usePortfolio } from "@/state/portfolio-context";
+import { useHistories } from "@/hooks/useHistories";
+import { useQuotes } from "@/hooks/useQuotes";
 
 const quantityFormat = new Intl.NumberFormat("en-US", {
   maximumSignificantDigits: 6,
@@ -15,6 +19,33 @@ export default function LotTable() {
   const { state, dispatch } = usePortfolio();
   const { lots, errors, fileName, importedAt } = state;
   const [collapsed, setCollapsed] = useState(false);
+
+  const tickers = useMemo(
+    () => [...new Set(lots.map((lot) => lot.ticker))].sort(),
+    [lots]
+  );
+  const earliest = useMemo(
+    () =>
+      lots.reduce(
+        (min, lot) => (lot.date < min ? lot.date : min),
+        lots[0]?.date ?? ""
+      ),
+    [lots]
+  );
+  const { histories } = useHistories(tickers, earliest);
+  const { quotes } = useQuotes(tickers);
+
+  const currentValues = useMemo(() => {
+    const map = new Map<Lot, number>();
+    if (!histories || !quotes) return map;
+    for (const lot of lots) {
+      const history = histories[lot.ticker];
+      const quote = quotes[lot.ticker];
+      if (history && quote != null)
+        map.set(lot, lotValueWithQuote(lot, history, quote));
+    }
+    return map;
+  }, [lots, histories, quotes]);
 
   const symbols = useMemo(
     () => [...new Set(lots.map((lot) => lot.ticker))].sort(),
@@ -106,7 +137,7 @@ export default function LotTable() {
 
           {lots.length > 0 && (
             <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
                   <tr>
                     <th className="px-4 py-3 font-medium">Date</th>
@@ -114,7 +145,12 @@ export default function LotTable() {
                     <th className="px-4 py-3 text-right font-medium">
                       Quantity
                     </th>
-                    <th className="px-4 py-3 text-right font-medium">Price</th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Cost / share
+                    </th>
+                    <th className="px-4 py-3 text-right font-medium">
+                      Value now
+                    </th>
                     <th className="px-4 py-3 font-medium">Comment</th>
                   </tr>
                 </thead>
@@ -139,6 +175,11 @@ export default function LotTable() {
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
                         {priceFormat.format(lot.price)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-zinc-700 dark:text-zinc-300">
+                        {currentValues.has(lot)
+                          ? priceFormat.format(currentValues.get(lot)!)
+                          : "—"}
                       </td>
                       <td className="px-4 py-2.5 text-zinc-500 dark:text-zinc-400">
                         {lot.price === 0 ? (

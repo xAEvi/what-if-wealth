@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { buildSeries, replaceAll, substituteTicker } from "@/lib/portfolio/engine";
+import {
+  buildSeries,
+  replaceAll,
+  substituteTicker,
+} from "@/lib/portfolio/engine";
 import { hasCoverage } from "@/lib/market/coverage";
 import { usePortfolio } from "@/state/portfolio-context";
 import { useHistories } from "@/hooks/useHistories";

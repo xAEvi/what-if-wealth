@@ -273,3 +273,12 @@ export function valueWithQuotes(
   }
   return total;
 }
+
+/** Valor de mercado actual de un lote, valuando su cantidad ajustada con la cotizacion. */
+export function lotValueWithQuote(
+  lot: Lot,
+  history: PriceHistory,
+  quote: number
+): number {
+  return normalize(lot, history).adjustedQuantity * quote;
+}

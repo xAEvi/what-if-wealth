@@ -51,8 +51,7 @@ export default function WeightDistribution() {
   const [searching, setSearching] = useState(false);
 
   const allTickers = useMemo(
-    () =>
-      [...new Set([...portfolioTickers, ...rows.map((row) => row.ticker)])],
+    () => [...new Set([...portfolioTickers, ...rows.map((row) => row.ticker)])],
     [portfolioTickers, rows]
   );
   const { histories, loading: historiesLoading } = useHistories(
@@ -98,7 +97,10 @@ export default function WeightDistribution() {
     if (!histories || !sumValid || rows.length === 0) return null;
     if (coverageIssues.length > 0) return null;
 
-    const weights = rows.map((row) => ({ ticker: row.ticker, weight: row.weight }));
+    const weights = rows.map((row) => ({
+      ticker: row.ticker,
+      weight: row.weight,
+    }));
     const distributedLots = distribute(lots, weights, histories);
     return buildSeries(distributedLots, histories, "Distributed");
   }, [histories, sumValid, rows, coverageIssues, lots]);
@@ -177,11 +179,19 @@ export default function WeightDistribution() {
                 min={0}
                 max={100}
                 step="any"
-                value={Number.isInteger(row.weight) ? row.weight : row.weight.toFixed(2)}
-                onChange={(event) => updateWeight(row.ticker, event.target.value)}
+                value={
+                  Number.isInteger(row.weight)
+                    ? row.weight
+                    : row.weight.toFixed(2)
+                }
+                onChange={(event) =>
+                  updateWeight(row.ticker, event.target.value)
+                }
                 className="w-24 rounded-lg border border-zinc-300 bg-white px-2 py-1.5 text-right text-sm tabular-nums text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
               />
-              <span className="text-sm text-zinc-500 dark:text-zinc-400">%</span>
+              <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                %
+              </span>
               {issue ? (
                 <span className="text-xs text-red-600 dark:text-red-400">
                   only has data since {histories?.[row.ticker]?.firstTradeDate}
@@ -234,10 +244,14 @@ export default function WeightDistribution() {
         </div>
 
         <div className="flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-800">
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">Total</span>
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            Total
+          </span>
           <span
             className={`text-sm font-semibold tabular-nums ${
-              sumValid ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+              sumValid
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
             }`}
           >
             {sum.toFixed(1)}%
@@ -259,8 +273,8 @@ export default function WeightDistribution() {
         </p>
       ) : coverageIssues.length > 0 ? (
         <p className="text-sm text-red-600 dark:text-red-400">
-          Some tickers don&apos;t cover your earliest lot ({portfolioEarliest}). Remove them to
-          compare.
+          Some tickers don&apos;t cover your earliest lot ({portfolioEarliest}).
+          Remove them to compare.
         </p>
       ) : distributed && original ? (
         <>

@@ -2,7 +2,7 @@
 
 Visualizador de portafolio con simulación contrafactual. Importa el CSV de compras reales
 exportado desde Yahoo Finance, valora el portafolio contra precios históricos de mercado y te
-deja responder preguntas del tipo *"¿qué hubiera pasado si en vez de X hubiera comprado Y?"*.
+deja responder preguntas del tipo _"¿qué hubiera pasado si en vez de X hubiera comprado Y?"_.
 
 ## Qué hace
 
@@ -49,16 +49,16 @@ inválidas se descartan y se listan en una tabla de errores con su número de l�
 
 ## Stack
 
-| Capa | Elección |
-| --- | --- |
-| Framework | Next.js 15 (App Router) + TypeScript |
+| Capa             | Elección                                                  |
+| ---------------- | --------------------------------------------------------- |
+| Framework        | Next.js 15 (App Router) + TypeScript                      |
 | Datos de mercado | `yahoo-finance2` en Route Handlers (proxy, con cache TTL) |
-| Gráficas | `recharts` |
-| CSV | `papaparse` |
-| Estilos | Tailwind CSS |
-| Estado | React Context + `useReducer` |
-| Persistencia | `localStorage` |
-| Package manager | `yarn` |
+| Gráficas         | `recharts`                                                |
+| CSV              | `papaparse`                                               |
+| Estilos          | Tailwind CSS                                              |
+| Estado           | React Context + `useReducer`                              |
+| Persistencia     | `localStorage`                                            |
+| Package manager  | `yarn`                                                    |
 
 ## Scripts
 

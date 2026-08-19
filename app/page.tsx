@@ -40,8 +40,8 @@ export default function Home() {
         ) : (
           <div className="flex flex-col items-center gap-2 text-center">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Nothing imported yet. Load your Yahoo portfolio CSV to get started,
-              or download a sample to explore the tool.
+              Nothing imported yet. Load your Yahoo portfolio CSV to get
+              started, or download a sample to explore the tool.
             </p>
             <a
               href="/portfolio-sample.csv"
