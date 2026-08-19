@@ -12,6 +12,7 @@ import { useQuotes } from "@/hooks/useQuotes";
 import SummaryCards from "@/components/summary/SummaryCards";
 import ValueChart from "@/components/charts/ValueChart";
 import GrowthChart from "@/components/charts/GrowthChart";
+import DividendNotice from "@/components/common/DividendNotice";
 
 const usd = (value: number) =>
   value.toLocaleString("en-US", {
@@ -37,7 +38,7 @@ export default function Dashboard() {
     [lots]
   );
 
-  const { histories, loading, error } = useHistories(tickers, earliestDate);
+  const { histories, loading, error, reload } = useHistories(tickers, earliestDate);
   const { quotes } = useQuotes(tickers);
   const [excludeZeroCost, setExcludeZeroCost] = useState(false);
 
@@ -90,8 +91,15 @@ export default function Dashboard() {
           Loading market data…
         </p>
       ) : error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50/60 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
-          {error}
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50/60 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={reload}
+            className="shrink-0 rounded-md border border-red-300 px-3 py-1 font-medium transition-colors hover:bg-red-100 dark:border-red-800 dark:hover:bg-red-900"
+          >
+            Retry
+          </button>
         </div>
       ) : series ? (
         <>
@@ -160,10 +168,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Values assume dividends are reinvested (adjusted close). Current
-            value uses live quotes.
-          </p>
+          <DividendNotice />
         </>
       ) : null}
     </section>

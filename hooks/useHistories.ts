@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { PriceHistory } from "@/lib/portfolio/types";
 
 /**
@@ -14,6 +14,7 @@ export function useHistories(
   histories: Record<string, PriceHistory> | null;
   loading: boolean;
   error: string | null;
+  reload: () => void;
 } {
   const [histories, setHistories] = useState<Record<
     string,
@@ -21,6 +22,7 @@ export function useHistories(
   > | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const tickerKey = tickers.join(",");
 
   useEffect(() => {
@@ -51,7 +53,9 @@ export function useHistories(
     return () => {
       cancelled = true;
     };
-  }, [tickerKey, from, tickers.length]);
+  }, [tickerKey, from, attempt, tickers.length]);
 
-  return { histories, loading, error };
+  const reload = useCallback(() => setAttempt((value) => value + 1), []);
+
+  return { histories, loading, error, reload };
 }

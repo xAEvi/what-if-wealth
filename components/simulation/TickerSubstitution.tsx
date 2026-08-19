@@ -8,6 +8,7 @@ import { useHistories } from "@/hooks/useHistories";
 import ComparisonChart, {
   type ComparisonDatum,
 } from "@/components/charts/ComparisonChart";
+import DividendNotice from "@/components/common/DividendNotice";
 
 type Candidate = {
   symbol: string;
@@ -309,6 +310,7 @@ export default function TickerSubstitution() {
               </p>
             </div>
           </div>
+          <DividendNotice />
         </>
       ) : null}
     </section>
