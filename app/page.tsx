@@ -4,6 +4,7 @@ import CsvDropzone from "@/components/csv/CsvDropzone";
 import LotTable from "@/components/csv/LotTable";
 import Dashboard from "@/components/dashboard/Dashboard";
 import TickerSubstitution from "@/components/simulation/TickerSubstitution";
+import WeightDistribution from "@/components/simulation/WeightDistribution";
 import { usePortfolio } from "@/state/portfolio-context";
 
 export default function Home() {
@@ -32,6 +33,7 @@ export default function Home() {
               <>
                 <Dashboard />
                 <TickerSubstitution />
+                <WeightDistribution />
               </>
             )}
           </>
