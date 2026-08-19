@@ -1,0 +1,39 @@
+/* Tokens semanticos de diseno: color, borde, radio y sombra.
+ * Viven como variables CSS planas y se mapean a utilidades de Tailwind en
+ * globals.css. El dark mode se resuelve por prefers-color-scheme. */
+
+:root {
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --surface-2: #f1f1f3;
+  --border: #e4e4e7;
+  --fg: #18181b;
+  --fg-muted: #52525b;
+  --fg-subtle: #a1a1aa;
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #18181b;
+    --border: #27272a;
+    --fg: #fafafa;
+    --fg-muted: #a1a1aa;
+    --fg-subtle: #71717a;
+    --accent: #3b82f6;
+    --accent-contrast: #0a0a0a;
+    --success: #10b981;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 1px 3px rgb(0 0 0 / 0.6);
+  }
+}
